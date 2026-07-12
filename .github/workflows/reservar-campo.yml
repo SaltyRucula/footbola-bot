@@ -23,6 +23,10 @@ on:
         description: "Data YYYY-MM-DD opcional; vazio = próxima sexta-feira"
         required: false
         default: ""
+      target_hour:
+        description: "Hora HH:MM a reservar"
+        required: false
+        default: "20:00"
       upload_artifacts:
         description: "Guardar screenshot/HTML autenticado para debug"
         required: false
@@ -32,13 +36,13 @@ on:
           - "false"
           - "true"
   schedule:
-    - cron: "58 22 * * 6"
-    - cron: "58 23 * * 6"
+    - cron: "40 22 * * 6"
+    - cron: "40 23 * * 6"
 
 jobs:
   reservar:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
@@ -66,6 +70,7 @@ jobs:
           SCL_SAVE_ARTIFACTS: ${{ inputs.upload_artifacts == 'true' && '1' || '' }}
           SKIP_TIME_GUARD: ${{ inputs.skip_time_guard == 'true' && '1' || '' }}
           SCL_TARGET_DATE: ${{ inputs.target_date }}
+          SCL_TARGET_HOUR: ${{ inputs.target_hour || vars.SCL_TARGET_HOUR || '20:00' }}
 
       - name: Upload reservation artifacts
         if: ${{ always() && inputs.upload_artifacts == 'true' }}

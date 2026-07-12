@@ -5,7 +5,7 @@ const { chromium } = require('playwright');
 const LOGIN_URL = 'https://odivelas.scl.pt/login.php';
 const RESERVATION_URL = 'https://odivelas.scl.pt/aluguercampos.php?s=16';
 const TIME_ZONE = 'Europe/Lisbon';
-const TARGET_HOUR = '20:00';
+const DEFAULT_TARGET_HOUR = '20:00';
 const FOOTBALL_7_SPORT_ID = '35';
 const DEFAULT_PLAYERS = '14';
 const ARTIFACT_DIR = path.resolve(process.cwd(), 'reservation-artifacts');
@@ -94,9 +94,9 @@ function nextFridayInLisbon(now = new Date()) {
   return formatDate(target);
 }
 
-async function waitForSundayMidnightLisbon() {
+async function waitForSundayReleaseLisbon() {
   if (process.env.SKIP_TIME_GUARD === '1') {
-    console.log('SKIP_TIME_GUARD=1 set; skipping Sunday midnight guard.');
+    console.log('SKIP_TIME_GUARD=1 set; skipping Sunday release guard.');
     return;
   }
 
@@ -107,15 +107,15 @@ async function waitForSundayMidnightLisbon() {
     const weekday = weekdayNumber(parts.weekday);
     const secondsSinceMidnight = parts.hour * 3600 + parts.minute * 60 + parts.second;
 
-    if (weekday === 0 && secondsSinceMidnight <= 10 * 60) {
-      console.log('Within the Sunday midnight reservation window in Europe/Lisbon.');
+    if (weekday === 0 && secondsSinceMidnight >= 1 && secondsSinceMidnight <= 10 * 60) {
+      console.log('Within the Sunday release window in Europe/Lisbon.');
       return;
     }
 
-    if (weekday === 6 && parts.hour === 23 && parts.minute >= 55) {
-      const secondsToMidnight = (24 * 3600) - secondsSinceMidnight;
-      console.log(`Waiting ${secondsToMidnight}s for Sunday 00:00 Europe/Lisbon.`);
-      await new Promise((resolve) => setTimeout(resolve, secondsToMidnight * 1000));
+    if (weekday === 6 && parts.hour === 23 && parts.minute >= 30) {
+      const millisecondsToRelease = ((24 * 3600) - secondsSinceMidnight + 1) * 1000;
+      console.log(`Logged in; waiting ${Math.ceil(millisecondsToRelease / 1000)}s for Sunday 00:00:01 Europe/Lisbon.`);
+      await new Promise((resolve) => setTimeout(resolve, millisecondsToRelease));
       continue;
     }
 
@@ -190,15 +190,14 @@ async function run() {
   const players = process.env.SCL_PLAYERS || DEFAULT_PLAYERS;
   const dryRun = process.env.SCL_DRY_RUN === '1';
   const targetDate = process.env.SCL_TARGET_DATE || nextFridayInLisbon();
-
-  await waitForSundayMidnightLisbon();
+  const targetHour = process.env.SCL_TARGET_HOUR || DEFAULT_TARGET_HOUR;
 
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1200 } });
 
   try {
     page.setDefaultTimeout(30000);
-    console.log(`Logging in with configured SCL_USERNAME. Target date: ${targetDate}; target time: ${TARGET_HOUR}.`);
+    console.log(`Logging in with configured SCL_USERNAME. Target date: ${targetDate}; target time: ${targetHour}.`);
 
     await page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded' });
     await page.locator('#email').fill(username);
@@ -212,16 +211,23 @@ async function run() {
       throw new Error('Login appears to have failed; password field is still visible.');
     }
 
+    await waitForSundayReleaseLisbon();
+
     const reservationUrl = `${RESERVATION_URL}&dia=${targetDate}&desporto=${FOOTBALL_7_SPORT_ID}`;
     await page.goto(reservationUrl, { waitUntil: 'networkidle' });
 
-    const targetButton = page.locator('button.btn_reserva', { hasText: TARGET_HOUR }).first();
-    await targetButton.waitFor({ state: 'visible', timeout: 30000 });
+    const targetButton = page.locator('button.btn_reserva', { hasText: targetHour }).first();
+    const targetButtonCount = await page.locator('button.btn_reserva').count();
+    if (targetButtonCount === 0) {
+      throw new Error(`No reservation time buttons found for ${targetDate}. Check that SCL_TARGET_DATE is a valid bookable date.`);
+    }
+
+    await targetButton.waitFor({ state: 'visible', timeout: 15000 });
 
     const classes = await targetButton.getAttribute('class');
     const hasClickHandler = await targetButton.evaluate((button) => Boolean(button.getAttribute('onclick')));
     if ((classes || '').includes('btn_cinza') || !hasClickHandler) {
-      throw new Error(`The ${TARGET_HOUR} slot is not available for booking yet or has no reservation action.`);
+      throw new Error(`The ${targetHour} slot is not available for booking yet or has no reservation action.`);
     }
 
     await targetButton.click();
