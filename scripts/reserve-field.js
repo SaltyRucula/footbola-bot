@@ -126,10 +126,10 @@ async function waitForSundayReleaseLisbon() {
 }
 
 async function chooseFirstNonEmptyOption(locator, label) {
-  await locator.waitFor({ state: 'visible', timeout: 15000 });
+  await locator.waitFor({ state: 'attached', timeout: 15000 });
   await locator.page().waitForFunction(
-    (selector) => Array.from(document.querySelector(selector)?.options || []).some((option) => option.value),
-    await locator.evaluate((element) => element.id ? `#${element.id}` : `[name="${element.getAttribute('name')}"]`),
+    (select) => Array.from(select.options || []).some((option) => option.value),
+    await locator.elementHandle(),
     { timeout: 15000 }
   );
 
@@ -142,7 +142,15 @@ async function chooseFirstNonEmptyOption(locator, label) {
     throw new Error(`No selectable option found for ${label}.`);
   }
 
-  await locator.selectOption(value);
+  const isVisible = await locator.isVisible().catch(() => false);
+  await locator.evaluate((select, selectedValue) => {
+    select.value = selectedValue;
+    select.dispatchEvent(new Event('input', { bubbles: true }));
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  }, value);
+  if (!isVisible) {
+    console.log(`${label} select is hidden; selected value through DOM event.`);
+  }
   console.log(`Selected ${label}: ${value}`);
 }
 
