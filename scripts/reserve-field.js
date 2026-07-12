@@ -5,7 +5,7 @@ const { chromium } = require('playwright');
 const LOGIN_URL = 'https://odivelas.scl.pt/login.php';
 const RESERVATION_URL = 'https://odivelas.scl.pt/aluguercampos.php?s=16';
 const TIME_ZONE = 'Europe/Lisbon';
-const DEFAULT_TARGET_HOUR = '20:00';
+const DEFAULT_TARGET_HOUR = '21:00';
 const FOOTBALL_7_SPORT_ID = '35';
 const DEFAULT_PLAYERS = '14';
 const ARTIFACT_DIR = path.resolve(process.cwd(), 'reservation-artifacts');
