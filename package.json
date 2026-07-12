@@ -1,0 +1,13 @@
+{
+  "name": "footbola-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Automação Playwright para reservar o campo relvado sintético de Odivelas.",
+  "scripts": {
+    "reserve": "node scripts/reserve-field.js",
+    "check": "node --check scripts/reserve-field.js"
+  },
+  "dependencies": {
+    "playwright": "^1.58.2"
+  }
+}

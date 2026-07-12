@@ -1,0 +1,77 @@
+name: Reservar Campo Relvado Sintético
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Parar antes do clique final em Reservar"
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      skip_time_guard:
+        description: "Ignorar validação de domingo 00:00 Europe/Lisbon"
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      target_date:
+        description: "Data YYYY-MM-DD opcional; vazio = próxima sexta-feira"
+        required: false
+        default: ""
+      upload_artifacts:
+        description: "Guardar screenshot/HTML autenticado para debug"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+  schedule:
+    - cron: "58 22 * * 6"
+    - cron: "58 23 * * 6"
+
+jobs:
+  reservar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Attempt reservation
+        run: npm run reserve
+        env:
+          SCL_USERNAME: ${{ secrets.SCL_USERNAME }}
+          SCL_PASSWORD: ${{ secrets.SCL_PASSWORD }}
+          SCL_PLAYERS: ${{ vars.SCL_PLAYERS || '14' }}
+          SCL_DRY_RUN: ${{ inputs.dry_run == 'true' && '1' || '' }}
+          SCL_SAVE_ARTIFACTS: ${{ inputs.upload_artifacts == 'true' && '1' || '' }}
+          SKIP_TIME_GUARD: ${{ inputs.skip_time_guard == 'true' && '1' || '' }}
+          SCL_TARGET_DATE: ${{ inputs.target_date }}
+
+      - name: Upload reservation artifacts
+        if: ${{ always() && inputs.upload_artifacts == 'true' }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: reservation-artifacts
+          path: reservation-artifacts/
+          if-no-files-found: ignore
+          retention-days: 7
