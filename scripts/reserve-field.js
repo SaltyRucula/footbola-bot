@@ -160,7 +160,8 @@ async function choosePriceIfAvailable(page) {
   await price.waitFor({ state: 'attached', timeout: 15000 });
 
   const value = await price.evaluate((select) => {
-    const option = Array.from(select.options).find((item) => item.value);
+    const options = select.options ? Array.from(select.options) : [];
+    const option = options.find((item) => item.value);
     return option ? option.value : '';
   });
 
