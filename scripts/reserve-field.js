@@ -14,6 +14,9 @@ const FAILURE_PATTERNS = [
   /\bindispon[ií]vel\b/i,
   /\bocupad[ao]\b/i,
   /\berro\b/i,
+  /\bdesculpa\b/i,
+  /\besgotad[ao]\b/i,
+  /\bencerrad[ao]\b/i,
   /\binv[aá]lid[ao]\b/i,
   /\bexpirad[ao]\b/i,
   /\bultrapassad[ao]\b/i,
@@ -197,8 +200,34 @@ async function saveArtifacts(page, prefix) {
   await fs.writeFile(path.join(ARTIFACT_DIR, `${prefix}.html`), await page.content());
 }
 
+async function visibleTextSnippets(page, selector) {
+  return page.locator(selector).evaluateAll((elements) => elements
+    .filter((element) => {
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.visibility !== 'hidden' && style.display !== 'none' && rect.width > 0 && rect.height > 0;
+    })
+    .map((element) => element.innerText || element.textContent || '')
+    .map((text) => text.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .slice(0, 8));
+}
+
+async function sanitizedOutcomeDiagnostics(page) {
+  const [title, headings, alerts, modalText, url] = await Promise.all([
+    page.title().catch(() => ''),
+    visibleTextSnippets(page, 'h1, h2, h3, h4, .page-header').catch(() => []),
+    visibleTextSnippets(page, '.alert, .alert-danger, .alert-success, #div_informacao').catch(() => []),
+    visibleTextSnippets(page, '.modal:visible, #myModal_info, #msgModal, #msgmodal').catch(() => []),
+    page.url(),
+  ]);
+
+  return JSON.stringify({ url, title, headings, alerts, modalText });
+}
+
 async function verifyReservationOutcome(page) {
   await page.waitForLoadState('domcontentloaded').catch(() => undefined);
+  await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => undefined);
   const bodyText = await page.locator('body').innerText({ timeout: 15000 });
 
   if (await page.locator('#password').isVisible().catch(() => false)) {
@@ -222,7 +251,7 @@ async function verifyReservationOutcome(page) {
   if (SAVE_ARTIFACTS) {
     console.log(bodyText.slice(0, 2000));
   }
-  throw new Error('Reservation outcome is ambiguous; review the site response before treating this as success.');
+  throw new Error(`Reservation outcome is ambiguous; sanitized diagnostics: ${await sanitizedOutcomeDiagnostics(page)}`);
 }
 
 async function run() {
@@ -305,10 +334,10 @@ async function run() {
     }
 
     console.log('Submitting reservation attempt.');
-    await Promise.all([
-      page.waitForLoadState('networkidle').catch(() => undefined),
-      page.locator('#mymodalsubmit').click(),
-    ]);
+    await page.locator('#mymodalsubmit').click();
+    await page.waitForLoadState('domcontentloaded').catch(() => undefined);
+    await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => undefined);
+    await page.waitForTimeout(2000);
 
     await verifyReservationOutcome(page);
     await saveArtifacts(page, 'reservation-result');
