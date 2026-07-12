@@ -152,6 +152,38 @@ async function chooseFirstNonEmptyOption(locator, label) {
     console.log(`${label} select is hidden; selected value through DOM event.`);
   }
   console.log(`Selected ${label}: ${value}`);
+  return value;
+}
+
+async function choosePriceIfAvailable(page) {
+  const price = page.locator('#preco');
+  await price.waitFor({ state: 'attached', timeout: 15000 });
+
+  const value = await price.evaluate((select) => {
+    const option = Array.from(select.options).find((item) => item.value);
+    return option ? option.value : '';
+  });
+
+  if (!value) {
+    await page.evaluate(() => {
+      if (typeof calculavalor === 'function') {
+        calculavalor();
+      }
+      if (typeof enableReservar === 'function') {
+        enableReservar();
+      }
+    });
+    console.log('No price option available yet; triggered site calculation and will rely on reservation button validation.');
+    return '';
+  }
+
+  await price.evaluate((select, selectedValue) => {
+    select.value = selectedValue;
+    select.dispatchEvent(new Event('input', { bubbles: true }));
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  }, value);
+  console.log(`Selected price: ${value}`);
+  return value;
 }
 
 async function saveArtifacts(page, prefix) {
@@ -242,7 +274,7 @@ async function run() {
     await page.locator('#myModal').waitFor({ state: 'visible', timeout: 30000 });
 
     await chooseFirstNonEmptyOption(page.locator('#tempo'), 'duration');
-    await chooseFirstNonEmptyOption(page.locator('#preco'), 'price');
+    await choosePriceIfAvailable(page);
 
     const playersInput = page.locator('#njogadores');
     if (await playersInput.isVisible().catch(() => false)) {
