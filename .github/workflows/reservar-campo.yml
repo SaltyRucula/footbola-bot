@@ -12,7 +12,7 @@ on:
           - "true"
           - "false"
       skip_time_guard:
-        description: "Ignorar validação de domingo 00:00 Europe/Lisbon"
+        description: "Ignorar validação de segunda-feira 00:00 Europe/Lisbon"
         required: false
         default: "true"
         type: choice
@@ -36,8 +36,8 @@ on:
           - "false"
           - "true"
   schedule:
-    - cron: "40 22 * * 6"
-    - cron: "40 23 * * 6"
+    - cron: "40 22 * * 0"
+    - cron: "40 23 * * 0"
 
 jobs:
   reservar:

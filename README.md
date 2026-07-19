@@ -1,6 +1,6 @@
 # footbola-bot
 
-GitHub Action com Playwright para tentar reservar o Campo Relvado Sintético de Odivelas à hora configurada da próxima sexta-feira, assim que a janela abrir ao domingo à meia-noite em `Europe/Lisbon`.
+GitHub Action com Playwright para tentar reservar o Campo Relvado Sintético de Odivelas à hora configurada da próxima sexta-feira, assim que a janela abrir à segunda-feira à meia-noite em `Europe/Lisbon`.
 
 ## Secrets necessários
 
@@ -16,7 +16,7 @@ Opcional em `Variables`:
 
 ## Execução
 
-A workflow corre automaticamente aos sábados à noite em UTC para estar autenticada antes de domingo `00:00 Europe/Lisbon`, incluindo horário de verão/inverno. Depois do login, o script espera até `00:00:01 Europe/Lisbon` e só aí abre a página de reservas.
+A workflow corre automaticamente aos domingos à noite em UTC para estar autenticada antes de segunda-feira `00:00 Europe/Lisbon`, incluindo horário de verão/inverno. Depois do login, o script espera até segunda-feira `00:00:01 Europe/Lisbon` e só aí abre a página de reservas.
 
 Também pode ser executada manualmente via `workflow_dispatch`. Por segurança, `dry_run` vem como `true` nas execuções manuais; nesse modo o script faz login, abre o modal e pára antes do clique final em `Reservar`.
 

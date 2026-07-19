@@ -97,9 +97,9 @@ function nextFridayInLisbon(now = new Date()) {
   return formatDate(target);
 }
 
-async function waitForSundayReleaseLisbon() {
+async function waitForMondayReleaseLisbon() {
   if (process.env.SKIP_TIME_GUARD === '1') {
-    console.log('SKIP_TIME_GUARD=1 set; skipping Sunday release guard.');
+    console.log('SKIP_TIME_GUARD=1 set; skipping Monday release guard.');
     return;
   }
 
@@ -110,14 +110,14 @@ async function waitForSundayReleaseLisbon() {
     const weekday = weekdayNumber(parts.weekday);
     const secondsSinceMidnight = parts.hour * 3600 + parts.minute * 60 + parts.second;
 
-    if (weekday === 0 && secondsSinceMidnight >= 1 && secondsSinceMidnight <= 10 * 60) {
-      console.log('Within the Sunday release window in Europe/Lisbon.');
+    if (weekday === 1 && secondsSinceMidnight >= 1 && secondsSinceMidnight <= 10 * 60) {
+      console.log('Within the Monday release window in Europe/Lisbon.');
       return;
     }
 
-    if (weekday === 6 && parts.hour === 23 && parts.minute >= 30) {
+    if (weekday === 0 && parts.hour === 23 && parts.minute >= 30) {
       const millisecondsToRelease = ((24 * 3600) - secondsSinceMidnight + 1) * 1000;
-      console.log(`Logged in; waiting ${Math.ceil(millisecondsToRelease / 1000)}s for Sunday 00:00:01 Europe/Lisbon.`);
+      console.log(`Logged in; waiting ${Math.ceil(millisecondsToRelease / 1000)}s for Monday 00:00:01 Europe/Lisbon.`);
       await new Promise((resolve) => setTimeout(resolve, millisecondsToRelease));
       continue;
     }
@@ -281,7 +281,7 @@ async function run() {
       throw new Error('Login appears to have failed; password field is still visible.');
     }
 
-    await waitForSundayReleaseLisbon();
+    await waitForMondayReleaseLisbon();
 
     const reservationUrl = `${RESERVATION_URL}&dia=${targetDate}&desporto=${FOOTBALL_7_SPORT_ID}`;
     await page.goto(reservationUrl, { waitUntil: 'networkidle' });
